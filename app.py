@@ -76,7 +76,6 @@ with st.sidebar:
                     temperature=0.1
                 )
                 
-                # Prepara o resumo dos dados para o contexto da IA
                 resumo_planilha = df[['Item', 'Descricao', 'Und', 'Quant', 'Total', 'Peso_Percent']].to_string()
                 full_prompt = f"{system_persona}\n\nDados da Planilha Orçamentária:\n{resumo_planilha}"
 
@@ -91,6 +90,10 @@ with st.sidebar:
                 st.success("Conectado com sucesso!")
             except Exception as e:
                 st.error(f"Erro ao conectar: {e}")
+
+    st.divider()
+    if st.button("💬 Abrir / Fechar Chat WhatsApp", use_container_width=True):
+        st.session_state.chat_open = not st.session_state.chat_open
 
 # --- CORPO PRINCIPAL: DASHBOARD ---
 st.title("🏗️ Dashboard Orçamentário - Coren SP (Subsolos)")
@@ -139,64 +142,134 @@ st.dataframe(
     hide_index=True
 )
 
-# --- POPUP DO CHATBOT ESTILO WHATSAPP (FLUTUANTE) ---
+# --- ESTILIZAÇÃO CSS ESTILO WHATSAPP ---
 st.markdown("""
 <style>
-    .whatsapp-btn {
+    /* Fundo e container geral do chat estilo WhatsApp */
+    .whatsapp-container {
         position: fixed;
-        bottom: 25px;
-        right: 25px;
-        background-color: #25D366;
+        bottom: 20px;
+        right: 20px;
+        width: 400px;
+        height: 580px;
+        background-color: #efeae2;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid #d1d7db;
+    }
+    /* Cabeçalho do WhatsApp */
+    .whatsapp-header {
+        background-color: #005e54;
         color: white;
-        border-radius: 50px;
-        padding: 12px 20px;
-        font-size: 16px;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: sans-serif;
+    }
+    .whatsapp-header .title {
         font-weight: bold;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
-        z-index: 9999;
-        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .whatsapp-header .subtitle {
+        font-size: 11px;
+        color: #e2e8f0;
+    }
+    /* Corpo de mensagens */
+    .whatsapp-body {
+        flex: 1;
+        padding: 15px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background-image: radial-gradient(#d4dad6 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+    /* Balões de mensagem */
+    .wa-message-user {
+        background-color: #d9fdd3;
+        color: #111b21;
+        padding: 8px 12px;
+        border-radius: 8px 0px 8px 8px;
+        max-width: 80%;
+        align-self: flex-end;
+        box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+        font-size: 14px;
+    }
+    .wa-message-bot {
+        background-color: #ffffff;
+        color: #111b21;
+        padding: 8px 12px;
+        border-radius: 0px 8px 8px 8px;
+        max-width: 80%;
+        align-self: flex-start;
+        box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+        font-size: 14px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Toggle do Chat Flutuante
-with st.sidebar:
-    st.divider()
-    if st.button("💬 Abrir/Fechar Chat Whatsapp", use_container_width=True):
-        st.session_state.chat_open = not st.session_state.chat_open
-
+# --- POPUP FLUTUANTE DO CHAT ESTILO WHATSAPP ---
 if st.session_state.chat_open:
-    with st.expander("💬 Assistente Tira-Dúvidas (WhatsApp Style)", expanded=True):
-        col_c1, col_c2 = st.columns([4, 1])
-        with col_c2:
-            if st.button("🔄 Limpar"):
-                st.session_state.chat_history = []
-                st.rerun()
+    # Criação do Widget Flutuante Customizado via HTML/Streamlit
+    st.markdown("""
+        <div class="whatsapp-container">
+            <div class="whatsapp-header">
+                <div class="title">
+                    <span>🏗️</span>
+                    <div>
+                        <div>Assistente Obra Coren SP</div>
+                        <div class="subtitle">online • IA Especialista</div>
+                    </div>
+                </div>
+            </div>
+    """, unsafe_allow_html=True)
 
+    # Container interno para mensagens do Streamlit
+    chat_container = st.container()
+    with chat_container:
+        # Exibe histórico em formato visual de balões
         for msg in st.session_state.chat_history:
             if isinstance(msg, HumanMessage):
-                with st.chat_message("user"):
-                    st.markdown(msg.content)
+                st.markdown(f'<div style="display: flex; justify-content: flex-end;"><div class="wa-message-user">{msg.content}</div></div>', unsafe_allow_html=True)
             elif isinstance(msg, AIMessage):
-                with st.chat_message("assistant"):
-                    st.markdown(msg.content)
+                st.markdown(f'<div style="display: flex; justify-content: flex-start;"><div class="wa-message-bot">🤖 {msg.content}</div></div>', unsafe_allow_html=True)
 
-        user_input = st.chat_input("Pergunte algo sobre o orçamento da obra...")
-        if user_input:
-            if not st.session_state.connected:
-                st.warning("⚠️ Por favor, conecte as credenciais da Azure na barra lateral primeiro.")
-            else:
-                with st.chat_message("user"):
-                    st.markdown(user_input)
+    # Barra de entrada de texto e botões inferiores fixos no pop-up
+    col_input, col_btn_clear = st.columns([5, 1])
+    with col_btn_clear:
+        if st.button("🧹", help="Limpar conversa"):
+            st.session_state.chat_history = []
+            st.rerun()
 
-                with st.chat_message("assistant"):
-                    with st.spinner("Consultando planilha..."):
-                        response = st.session_state.qa_chain.invoke({
-                            "input": user_input,
-                            "chat_history": st.session_state.chat_history
-                        })
-                        ans = response.content if hasattr(response, "content") else str(response)
-                        st.markdown(ans)
+    user_input = st.chat_input("Digite sua dúvida sobre a planilha...")
+    if user_input:
+        if not st.session_state.connected:
+            st.warning("⚠️ Conecte a Azure na barra lateral!")
+        else:
+            st.session_state.chat_history.append(HumanMessage(content=user_input))
+            try:
+                response = st.session_state.qa_chain.invoke({
+                    "input": user_input,
+                    "chat_history": st.session_state.chat_history[:-1]
+                })
+                ans = response.content if hasattr(response, "content") else str(response)
+                st.session_state.chat_history.append(AIMessage(content=ans))
+            except Exception as e:
+                st.session_state.chat_history.append(AIMessage(content=f"Erro ao processar: {e}"))
+            st.rerun()
 
-                        st.session_state.chat_history.append(HumanMessage(content=user_input))
-                        st.session_state.chat_history.append(AIMessage(content=ans))
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Botão para fechar o popup flutuante
+    if st.sidebar.button("❌ Fechar Janela do Chat"):
+        st.session_state.chat_open = False
+        st.rerun()
