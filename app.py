@@ -137,36 +137,47 @@ st.dataframe(
     hide_index=True
 )
 
-# --- INJEÇÃO CSS PARA FIXAR O POPUP FLUTUANTE EXATAMENTE COMO NA IMAGEM DE REFERÊNCIA ---
+# --- CSS CORRIGIDO PARA GARANTIR VISIBILIDADE TOTAL DOS TEXTOS E BALÕES ---
 st.markdown("""
 <style>
-    /* Container flutuante fixado no canto inferior direito */
+    /* Card flutuante fixado no canto inferior direito */
     [data-testid="stVerticalBlock"] > div:has(div.floating-chat-marker) {
         position: fixed !important;
-        bottom: 40px !important;
+        bottom: 30px !important;
         right: 30px !important;
-        width: 380px !important;
-        max-height: 580px !important;
-        background-color: #0d1418 !important;
+        width: 390px !important;
+        max-height: 600px !important;
+        background-color: #111b21 !important;
         border-radius: 16px !important;
-        box-shadow: 0px 8px 32px rgba(0, 0, 0, 0.4) !important;
+        box-shadow: 0px 8px 32px rgba(0, 0, 0, 0.6) !important;
         z-index: 999999 !important;
-        padding: 15px !important;
-        border: 1px solid #1f2c34 !important;
+        padding: 16px !important;
+        border: 1px solid #222d34 !important;
         overflow: hidden !important;
     }
 
-    /* Cores dos balões de conversa estilo escuro (Dark WhatsApp) */
-    .stChatMessage[data-testid="stChatMessage"]:nth-child(even) {
-        background-color: #005c4b !important;
-        color: #ffffff !important;
+    /* Força cor branca para todo texto dentro do chat flutuante */
+    [data-testid="stVerticalBlock"] > div:has(div.floating-chat-marker) p, 
+    [data-testid="stVerticalBlock"] > div:has(div.floating-chat-marker) span, 
+    [data-testid="stVerticalBlock"] > div:has(div.floating-chat-marker) label {
+        color: #e9edef !important;
+    }
+
+    /* Estilização correta das mensagens de chat */
+    [data-testid="stVerticalBlock"] > div:has(div.floating-chat-marker) [data-testid="stChatMessage"] {
+        padding: 8px 12px !important;
+        margin-bottom: 8px !important;
         border-radius: 10px !important;
     }
 
-    .stChatMessage[data-testid="stChatMessage"]:nth-child(odd) {
+    /* Mensagem do Usuário (Verde WhatsApp Escuro) */
+    [data-testid="stVerticalBlock"] > div:has(div.floating-chat-marker) [data-testid="stChatMessage"]:nth-of-type(even) {
+        background-color: #005c4b !important;
+    }
+
+    /* Mensagem do Bot (Cinza Escuro) */
+    [data-testid="stVerticalBlock"] > div:has(div.floating-chat-marker) [data-testid="stChatMessage"]:nth-of-type(odd) {
         background-color: #202c33 !important;
-        color: #ffffff !important;
-        border-radius: 10px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -177,17 +188,17 @@ with st.container():
     
     # Cabeçalho do Card Flutuante
     st.markdown("""
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; border-bottom: 1px solid #222d34; padding-bottom: 8px;">
             <div style="font-size: 24px;">🎧</div>
             <div>
-                <div style="font-weight: bold; color: white; font-size: 15px;">Suporte de Obra Online</div>
+                <div style="font-weight: bold; color: #ffffff; font-size: 15px;">Suporte de Obra Online</div>
                 <div style="font-size: 11px; color: #00ff88;">● online agora</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
     # Caixa com rolagem para as mensagens
-    chat_box = st.container(height=320)
+    chat_box = st.container(height=300)
     with chat_box:
         if not st.session_state.chat_history:
             st.chat_message("assistant").write("Olá! Como posso ajudar você hoje com as dúvidas da planilha?")
