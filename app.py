@@ -19,8 +19,6 @@ if "qa_chain" not in st.session_state:
     st.session_state.qa_chain = None
 if "connected" not in st.session_state:
     st.session_state.connected = False
-if "chat_open" not in st.session_state:
-    st.session_state.chat_open = False
 
 # --- FUNÇÃO DE CARREGAMENTO DA PLANILHA ---
 @st.cache_data
@@ -91,169 +89,138 @@ with st.sidebar:
             except Exception as e:
                 st.error(f"Erro ao conectar: {e}")
 
-    st.divider()
-    if st.button("💬 Abrir / Fechar Chat WhatsApp", use_container_width=True):
-        st.session_state.chat_open = not st.session_state.chat_open
-
-# --- CORPO PRINCIPAL: DASHBOARD ---
-st.title("🏗️ Dashboard Orçamentário - Coren SP (Subsolos)")
-
-total_geral = etapas['Total'].sum()
-total_mo = itens_detalhados['MO_Total'].sum()
-total_mat = itens_detalhados['MAT_Total'].sum()
-
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("Valor Total da Obra", f"R$ {total_geral:,.2f}")
-m2.metric("Total Mão de Obra", f"R$ {total_mo:,.2f}", f"{(total_mo/total_geral)*100:.1f}%")
-m3.metric("Total Materiais", f"R$ {total_mat:,.2f}", f"{(total_mat/total_geral)*100:.1f}%")
-m4.metric("B.D.I. Aplicado", "27,0%")
-
-st.divider()
-
-col_chart1, col_chart2 = st.columns([3, 2])
-
-with col_chart1:
-    st.subheader("📊 Custos por Etapa (Curva ABC)")
-    fig_etapas = px.bar(
-        etapas.sort_values(by='Total', ascending=True),
-        x='Total',
-        y='Descricao',
-        orientation='h',
-        text_auto='.2s',
-        color='Total',
-        color_continuous_scale='Blues'
-    )
-    fig_etapas.update_layout(showlegend=False, xaxis_title="Custo (R$)", yaxis_title="")
-    st.plotly_chart(fig_etapas, use_container_width=True)
-
-with col_chart2:
-    st.subheader("⚖️ Proporção M.O. vs Material")
-    df_prop = pd.DataFrame({
-        'Categoria': ['Mão de Obra', 'Material'],
-        'Valor': [total_mo, total_mat]
-    })
-    fig_pie = px.pie(df_prop, values='Valor', names='Categoria', hole=0.4, color_discrete_sequence=['#1f77b4', '#aec7e8'])
-    st.plotly_chart(fig_pie, use_container_width=True)
-
-st.subheader("📋 Planilha Orçamentária Detalhada")
-st.dataframe(
-    df[['Item', 'Codigo', 'Banco', 'Descricao', 'Und', 'Quant', 'MO_Total', 'MAT_Total', 'Total', 'Peso_Percent']],
-    use_container_width=True,
-    hide_index=True
-)
-
-# --- ESTILIZAÇÃO CSS ESTILO WHATSAPP ---
+# --- ESTILIZAÇÃO CSS ESTILO WHATSAPP PARA A ABA DE CHAT ---
 st.markdown("""
 <style>
-    /* Fundo e container geral do chat estilo WhatsApp */
-    .whatsapp-container {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 400px;
-        height: 580px;
+    .whatsapp-chat-box {
         background-color: #efeae2;
+        padding: 20px;
         border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-        z-index: 99999;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
         border: 1px solid #d1d7db;
-    }
-    /* Cabeçalho do WhatsApp */
-    .whatsapp-header {
-        background-color: #005e54;
-        color: white;
-        padding: 12px 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-family: sans-serif;
-    }
-    .whatsapp-header .title {
-        font-weight: bold;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .whatsapp-header .subtitle {
-        font-size: 11px;
-        color: #e2e8f0;
-    }
-    /* Corpo de mensagens */
-    .whatsapp-body {
-        flex: 1;
-        padding: 15px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         background-image: radial-gradient(#d4dad6 1px, transparent 1px);
         background-size: 20px 20px;
+        min-height: 450px;
+        max-height: 600px;
+        overflow-y: auto;
+        margin-bottom: 20px;
     }
-    /* Balões de mensagem */
     .wa-message-user {
         background-color: #d9fdd3;
         color: #111b21;
-        padding: 8px 12px;
+        padding: 10px 14px;
         border-radius: 8px 0px 8px 8px;
-        max-width: 80%;
-        align-self: flex-end;
+        max-width: 75%;
+        margin-left: auto;
+        margin-bottom: 10px;
         box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+        font-family: sans-serif;
         font-size: 14px;
     }
     .wa-message-bot {
         background-color: #ffffff;
         color: #111b21;
-        padding: 8px 12px;
+        padding: 10px 14px;
         border-radius: 0px 8px 8px 8px;
-        max-width: 80%;
-        align-self: flex-start;
+        max-width: 75%;
+        margin-right: auto;
+        margin-bottom: 10px;
         box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+        font-family: sans-serif;
         font-size: 14px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- POPUP FLUTUANTE DO CHAT ESTILO WHATSAPP ---
-if st.session_state.chat_open:
-    # Criação do Widget Flutuante Customizado via HTML/Streamlit
+# --- CORPO PRINCIPAL EM ABAS (ESTRUTURA LIMPA E PERFEITA) ---
+tab_dash, tab_chat = st.tabs(["📊 Dashboard & Orçamento", "💬 Chat WhatsApp (Tira-Dúvidas)"])
+
+with tab_dash:
+    st.title("🏗️ Dashboard Orçamentário - Coren SP (Subsolos)")
+
+    total_geral = etapas['Total'].sum()
+    total_mo = itens_detalhados['MO_Total'].sum()
+    total_mat = itens_detalhados['MAT_Total'].sum()
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Valor Total da Obra", f"R$ {total_geral:,.2f}")
+    m2.metric("Total Mão de Obra", f"R$ {total_mo:,.2f}", f"{(total_mo/total_geral)*100:.1f}%")
+    m3.metric("Total Materiais", f"R$ {total_mat:,.2f}", f"{(total_mat/total_geral)*100:.1f}%")
+    m4.metric("B.D.I. Aplicado", "27,0%")
+
+    st.divider()
+
+    col_chart1, col_chart2 = st.columns([3, 2])
+
+    with col_chart1:
+        st.subheader("📊 Custos por Etapa (Curva ABC)")
+        fig_etapas = px.bar(
+            etapas.sort_values(by='Total', ascending=True),
+            x='Total',
+            y='Descricao',
+            orientation='h',
+            text_auto='.2s',
+            color='Total',
+            color_continuous_scale='Blues'
+        )
+        fig_etapas.update_layout(showlegend=False, xaxis_title="Custo (R$)", yaxis_title="")
+        st.plotly_chart(fig_etapas, use_container_width=True)
+
+    with col_chart2:
+        st.subheader("⚖️ Proporção M.O. vs Material")
+        df_prop = pd.DataFrame({
+            'Categoria': ['Mão de Obra', 'Material'],
+            'Valor': [total_mo, total_mat]
+        })
+        fig_pie = px.pie(df_prop, values='Valor', names='Categoria', hole=0.4, color_discrete_sequence=['#1f77b4', '#aec7e8'])
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    st.subheader("📋 Planilha Orçamentária Detalhada")
+    st.dataframe(
+        df[['Item', 'Codigo', 'Banco', 'Descricao', 'Und', 'Quant', 'MO_Total', 'MAT_Total', 'Total', 'Peso_Percent']],
+        use_container_width=True,
+        hide_index=True
+    )
+
+with tab_chat:
+    st.markdown("### 💬 Chat Assistente Técnico - Estilo WhatsApp")
+    st.markdown("Tire dúvidas sobre quantitativos, materiais, custos e etapas diretamente com a IA conectada à base de dados.")
+
+    # Cabeçalho decorativo estilo WhatsApp Web
     st.markdown("""
-        <div class="whatsapp-container">
-            <div class="whatsapp-header">
-                <div class="title">
-                    <span>🏗️</span>
-                    <div>
-                        <div>Assistente Obra Coren SP</div>
-                        <div class="subtitle">online • IA Especialista</div>
-                    </div>
-                </div>
-            </div>
+        <div style="background-color: #005e54; color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: space-between; font-family: sans-serif;">
+            <div style="font-weight: bold; font-size: 15px;">🟢 Assistente Obra Coren SP (Online)</div>
+            <div style="font-size: 12px; opacity: 0.8;">Base de Dados: Coren SP Subsolos</div>
+        </div>
     """, unsafe_allow_html=True)
 
-    # Container interno para mensagens do Streamlit
+    # Caixa de exibição de mensagens com estilo WhatsApp
     chat_container = st.container()
     with chat_container:
-        # Exibe histórico em formato visual de balões
+        st.markdown('<div class="whatsapp-chat-box">', unsafe_allow_html=True)
+        
+        if not st.session_state.chat_history:
+            st.markdown('<div class="wa-message-bot">👋 Olá! Como posso ajudar você com a obra do Coren SP hoje? Pergunte sobre pisos, divisórias, engenharia ou custos.</div>', unsafe_allow_html=True)
+        
         for msg in st.session_state.chat_history:
             if isinstance(msg, HumanMessage):
-                st.markdown(f'<div style="display: flex; justify-content: flex-end;"><div class="wa-message-user">{msg.content}</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="wa-message-user">{msg.content}</div>', unsafe_allow_html=True)
             elif isinstance(msg, AIMessage):
-                st.markdown(f'<div style="display: flex; justify-content: flex-start;"><div class="wa-message-bot">🤖 {msg.content}</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="wa-message-bot">🤖 {msg.content}</div>', unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # Barra de entrada de texto e botões inferiores fixos no pop-up
-    col_input, col_btn_clear = st.columns([5, 1])
-    with col_btn_clear:
-        if st.button("🧹", help="Limpar conversa"):
+    # Barra de input e botão de limpeza alinhados perfeitamente
+    col_in, col_cln = st.columns([6, 1])
+    with col_cln:
+        if st.button("🧹 Limpar", use_container_width=True):
             st.session_state.chat_history = []
             st.rerun()
 
     user_input = st.chat_input("Digite sua dúvida sobre a planilha...")
     if user_input:
         if not st.session_state.connected:
-            st.warning("⚠️ Conecte a Azure na barra lateral!")
+            st.warning("⚠️ Por favor, insira as credenciais da Azure na barra lateral e clique em 'Conectar IA' primeiro.")
         else:
             st.session_state.chat_history.append(HumanMessage(content=user_input))
             try:
@@ -264,12 +231,5 @@ if st.session_state.chat_open:
                 ans = response.content if hasattr(response, "content") else str(response)
                 st.session_state.chat_history.append(AIMessage(content=ans))
             except Exception as e:
-                st.session_state.chat_history.append(AIMessage(content=f"Erro ao processar: {e}"))
+                st.session_state.chat_history.append(AIMessage(content=f"Erro ao processar resposta: {e}"))
             st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # Botão para fechar o popup flutuante
-    if st.sidebar.button("❌ Fechar Janela do Chat"):
-        st.session_state.chat_open = False
-        st.rerun()
